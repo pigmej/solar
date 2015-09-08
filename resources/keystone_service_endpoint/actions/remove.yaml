@@ -1,4 +1,4 @@
-- hosts: [{{ ip }}]
+- hosts: [{{ host }}]
   sudo: yes
   vars:
     ip: {{ip}}
@@ -17,4 +17,3 @@
         region: "RegionOne"
         state: present
         endpoint: http://{{keystone_host}}:{{keystone_admin_port}}/v2.0/
-
