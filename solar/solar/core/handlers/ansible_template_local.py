@@ -42,6 +42,19 @@ class AnsibleTemplateLocal(AnsibleTemplate):
         if out.failed:
             raise errors.SolarError(out)
 
+    def _render_inventory(self, r):
+        inventory = '{0} ansible_ssh_host={1} ansible_connection=ssh ansible_ssh_user={2} ansible_ssh_private_key_file={3} {4}'
+        host = r.ip()
+        ssh_transport = next(x for x in  r.transports() if x.name == 'ssh')
+        user = ssh_transport['user']
+        ssh_key = ssh_transport['ssh_key']
+        args = []
+        for arg in r.args:
+            args.append('{0}="{1}"'.format(arg, r.args[arg].value))
+        args = ' '.join(args)
+        inventory = inventory.format(host, host, user, ssh_key, args)
+        log.debug(inventory)
+        return inventory
 
     def _make_args(self, resource):
         args = super(AnsibleTemplateLocal, self)._make_args(resource)
