@@ -14,6 +14,7 @@
 #    under the License.
 
 from solar.core.handlers.ansible_template import AnsibleTemplate
+from solar.core.handlers.ansible_template_local import AnsibleTemplateLocal
 from solar.core.handlers.ansible_playbook import AnsiblePlaybook
 from solar.core.handlers.base import Empty
 from solar.core.handlers.puppet import Puppet, PuppetV2
@@ -21,6 +22,7 @@ from solar.core.handlers.shell import Shell
 
 
 HANDLERS = {'ansible': AnsibleTemplate,
+            'ansible_local': AnsibleTemplateLocal,
             'ansible_playbook': AnsiblePlaybook,
             'shell': Shell,
             'puppet': Puppet,
