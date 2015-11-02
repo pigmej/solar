@@ -27,6 +27,12 @@ class M3(Model):
     ind = IndexField(default=dict)
 
 
+class M4(Model):
+
+    f1 = Field(str)
+    f2 = Field(list)
+    f3 = Field(dict)
+
 
 def test_from_dict(rk):
     key = next(rk)
@@ -195,3 +201,27 @@ def test_strint_comparsions():
     assert isinstance(c, basestring)
     assert a > b
     assert a > c
+
+
+def test_wrapped_mutable(rk):
+    key1 = next(rk)
+
+    m = M4.from_dict(key1, {'f1': 'm',
+                            'f2': [1, 2, 3],
+                            'f3': {'a': 1}})
+    m.save()
+
+    m.f2.append(4)
+
+    assert m.changed()
+    assert len(m.f2) == 4
+
+    m.save()
+
+    _l = m.f2
+    m.f2 = _l
+
+    m.f3['b'] = 2
+    assert m.changed()
+    assert m.f3['b'] == 2
+

@@ -6,6 +6,8 @@ from operator import itemgetter
 import time
 from contextlib import contextmanager
 
+from solar.dblayer import mutable_wrappers
+
 LOCAL = local()
 
 class DBLayerException(Exception):
@@ -288,6 +290,7 @@ class Field(FieldBase):
 
     # in from_dict, when you set value to None, then types that are *not* there are set to NONE
     _not_nullable_types = {int, float, long, str, unicode, basestring}
+    _mutable_types = {dict, list}
     _simple_types = {int, float, long, str, unicode, basestring, list, tuple, dict}
 
     def __init__(self, _type, fname=None, default=NONE):
@@ -301,13 +304,24 @@ class Field(FieldBase):
             return self
         val = instance._data_container[self.fname]
         if self._type in self._simple_types:
+            if self._type in self._mutable_types:
+                cached = getattr(instance, '_real_obj_%s' % self.fname, None)
+                if cached:
+                    return cached
+                obj = mutable_wrappers.get_wrapper(self._type, instance, self, val)
+                setattr(instance, '_real_obj_%s' % self.fname, obj)
+                return obj
             return val
         else:
             return self._type.from_simple(val)
 
     def __set__(self, instance, value):
         if not isinstance(value, self._type):
-            raise Exception("Invalid type %r for %r, expected %r" % (type(value), self.fname, self._type))
+            if isinstance(value, mutable_wrappers.MutableWrapper):
+                if not isinstance(value.data, self._type):
+                    raise Exception("Invalid type %r for %r, expected %r" % (type(value), self.fname, self._type))
+            else:
+                raise Exception("Invalid type %r for %r, expected %r" % (type(value), self.fname, self._type))
         if self._type not in self._simple_types:
             value = self._type.to_simple(value)
         instance._field_changed(self)
@@ -685,7 +699,6 @@ class Model(object):
         if self._real_riak_object is not None:
             raise DBLayerException("Already have _riak_object")
         self._real_riak_object = value
-
 
     @property
     def _data_container(self):
