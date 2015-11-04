@@ -2,7 +2,9 @@ from solar.dblayer.model import (Model, Field, IndexField,
                                  IndexFieldWrp,
                                  DBLayerException,
                                  requires_clean_state, check_state_for,
-                                 StrInt, SingleIndexCache,
+                                 StrInt,
+                                 SingleIndexCache,
+                                 SingleIndexCacheStage,
                                  IndexedField, CompositeIndexField)
 from types import NoneType
 from operator import itemgetter
@@ -25,10 +27,13 @@ class InputsFieldWrp(IndexFieldWrp):
 
     _simple_types = (NoneType, int, float, basestring, str, unicode)
 
-    def __init__(self, *args, **kwargs):
-        super(InputsFieldWrp, self).__init__(*args, **kwargs)
-        # TODO: add cache for lookup
-        self.inputs_index_cache = SingleIndexCache()
+    def __init__(self, field_obj, instance):
+        super(InputsFieldWrp, self).__init__(field_obj, instance)
+        # if passed from other
+        inputs_index_cache = instance._c.container.get('single_index_cache', None)
+        if inputs_index_cache is None:
+            inputs_index_cache = SingleIndexCache()
+        self.inputs_index_cache = inputs_index_cache
         self._cache = {}
 
     def _input_type(self, resource, name):
@@ -583,18 +588,23 @@ class Resource(Model):
 
     @classmethod
     def childs(cls, parents):
-        all_indexes = cls.bucket.get_index(
-            'inputs_recv_bin',
-            startkey='',
-            endkey='~',
-            return_terms=True,
-            max_results=999999)
-
+        # set the cache
+        c = SingleIndexCacheStage()
+        with c:
+            # TODO: it would be cool if we could undo this override
+            cls._c.container['single_index_cache'] = c
+            c.get_index(cls.bucket.get_index,
+                                      'inputs_recv_bin',
+                                      startkey='',
+                                      endkey='~',
+                                      return_terms=True,
+                                      max_results=999999)
+            all_indexes = c.cached_vals
         tmp = defaultdict(set)
         to_visit = parents[:]
         visited = []
 
-        for item in all_indexes.results:
+        for item in all_indexes:
             data = item[0].split('|')
             em, rcv = data[0], data[2]
             tmp[rcv].add(em)

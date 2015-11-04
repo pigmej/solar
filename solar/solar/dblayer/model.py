@@ -67,16 +67,23 @@ class SingleIndexCache(object):
         self.lock.release()
 
 
+class SingleIndexCacheStage(SingleIndexCache):
+
+    def wipe(self):
+        raise Exception("You're not allowed to wipe this cache")
+
 
 class SingleClassCache(object):
 
     __slots__ = ['obj_cache', 'db_ch_state',
-                 'lazy_save', 'origin_class']
+                 'lazy_save', 'origin_class',
+                 'container']
 
     def __init__(self, origin_class):
         self.obj_cache = {}
         self.db_ch_state = {'index': set()}
         self.lazy_save = set()
+        self.container = {}  # TODO: we rarely need it, for mem opt we might make it dynamic
         self.origin_class = origin_class
 
 
