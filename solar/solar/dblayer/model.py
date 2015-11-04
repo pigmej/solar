@@ -7,6 +7,7 @@ from functools import wraps, total_ordering
 from operator import itemgetter
 import time
 from contextlib import contextmanager
+from threading import RLock
 
 LOCAL = get_local()()
 
@@ -26,6 +27,45 @@ class DBLayerNoRiakObj(DBLayerException):
 class NONE:
     """A None like type"""
     pass
+
+
+class SingleIndexCache(object):
+
+    def __init__(self):
+        self.lock = RLock()
+        self.cached_vals = []
+
+    def __enter__(self):
+        self.lock.acquire()
+        return self
+
+    def fill(self, values):
+        self.cached_vals = values
+
+    def wipe(self):
+        self.cached_vals = []
+
+    def get_index(self, real_funct, ind_name, **kwargs):
+        kwargs.setdefault('max_results', 999999)
+        if not self.cached_vals:
+            recvs = real_funct(ind_name, **kwargs).results
+            self.fill(recvs)
+
+    def filter(self, startkey, endkey, max_results=1):
+        c = self.cached_vals
+        for (curr_val, obj_key) in c:
+            if max_results == 0:
+                break
+            if curr_val >= startkey:
+                if curr_val <= endkey:
+                    max_results -= 1
+                    yield (curr_val, obj_key)
+                else:
+                    break
+
+    def __exit__(self, *args, **kwargs):
+        self.lock.release()
+
 
 
 class SingleClassCache(object):
