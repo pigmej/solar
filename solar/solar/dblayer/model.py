@@ -6,6 +6,8 @@ from operator import itemgetter
 import time
 from contextlib import contextmanager
 from threading import RLock
+# from bintrees import FastAVLTree
+from bintrees import FastRBTree
 
 
 class DBLayerException(Exception):
@@ -29,7 +31,7 @@ class SingleIndexCache(object):
 
     def __init__(self):
         self.lock = RLock()
-        self.cached_vals = []
+        self.cached_vals = None
 
     def __enter__(self):
         self.lock.acquire()
@@ -41,9 +43,12 @@ class SingleIndexCache(object):
     def wipe(self):
         self.cached_vals = []
 
+    def empty(self):
+        return True if not self.cached_vals else False
+
     def get_index(self, real_funct, ind_name, **kwargs):
         kwargs.setdefault('max_results', 999999)
-        if not self.cached_vals:
+        if self.empty():
             recvs = real_funct(ind_name, **kwargs).results
             self.fill(recvs)
 
@@ -65,8 +70,47 @@ class SingleIndexCache(object):
 
 class SingleIndexCacheStage(SingleIndexCache):
 
+    def __init__(self):
+        super(SingleIndexCacheStage, self).__init__()
+        self._tree = None
+        self.hit = 0
+        self.miss = 0
+        self._c = {}
+
+    @property
+    def cached_vals(self):
+        return self._tree.items()
+
+    @cached_vals.setter
+    def cached_vals(self, values):
+        if values is not None:
+            self._tree = FastRBTree(values)
+
+    def empty(self):
+        return self._tree is None
+
     def wipe(self):
         raise Exception("You're not allowed to wipe this cache")
+
+    def filter(self, startkey, endkey, max_results=1):
+        l = []
+        # self.num += 1
+        tree = self._tree
+        print 'miss:', self.miss, 'hit:', self.hit
+        try:
+            return self._c[(startkey, endkey, max_results)]
+        except KeyError:
+            self.miss += 1
+            pass
+        else:
+            self.hit += 1
+        for item in tree.iter_items(startkey, endkey):
+            max_results -= 1
+            l.append(item)
+            if max_results == 0:
+                break
+        self._c[(startkey, endkey, max_results)] = l
+        return l
 
 
 class SingleClassCache(object):
