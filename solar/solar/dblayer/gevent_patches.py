@@ -19,6 +19,9 @@ def _patch(obj, name, target):
     setattr(obj, name, target)
 
 
+def _wrap(wrp, obj, trg):
+    setattr(obj, trg, wrp(getattr(obj, trg)))
+
 
 def patch_all():
     from solar.dblayer.model import ModelMeta
@@ -29,7 +32,8 @@ def patch_all():
 
     from solar.dblayer.gevent_helpers import (multi_get,
                                               solar_map,
-                                              get_local)
+                                              get_local,
+                                              with_lock)
     from solar import utils
 
 
@@ -38,3 +42,5 @@ def patch_all():
     _patch(utils, 'solar_map', solar_map)
     _patch(utils, 'get_local', get_local)
     _patch(Model, '_local', get_local()())
+
+    _wrap(with_lock, Model, 'save_all_lazy')

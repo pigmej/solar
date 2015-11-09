@@ -7,6 +7,10 @@ import time
 from contextlib import contextmanager
 from threading import RLock
 
+from weakref import WeakValueDictionary as WeakDict
+
+from solar.dblayer.lfu_cache import LFUCache
+
 
 class DBLayerException(Exception):
     pass
@@ -67,14 +71,16 @@ class SingleIndexCache(object):
 class SingleClassCache(object):
 
     __slots__ = ['obj_cache', 'db_ch_state',
-                 'lazy_save', 'origin_class']
+                 'lazy_save', 'origin_class',
+                 'weak_models']
 
     def __init__(self, origin_class):
-        self.obj_cache = {}
+        # TODO: determine reasonable cache size
+        self.obj_cache = LFUCache(origin_class, 200)
         self.db_ch_state = {'index': set()}
         self.lazy_save = set()
         self.origin_class = origin_class
-
+        self.weak_models = WeakDict()
 
 class ClassCache(object):
 
@@ -348,6 +354,7 @@ class Field(FieldBase):
     def __get__(self, instance, owner):
         if instance is None:
             return self
+        instance._c.obj_cache.incr_count(instance.key)
         val = instance._data_container[self.fname]
         if self._type in self._simple_types:
             return val
@@ -806,7 +813,7 @@ class Model(object):
         obj._riak_object = riak_obj
         if obj._new is None:
             obj._new = False
-        cls._c.obj_cache[riak_obj.key] = obj
+        obj = cls._c.obj_cache.set(riak_obj.key, obj)  # cache may override it
         return obj
 
     @classmethod
@@ -851,6 +858,7 @@ class Model(object):
                 raise DBLayerNotFound(key)
             else:
                 obj = cls.from_riakobj(riak_object)
+                cls._c.weak_models[key] = obj
                 return obj
 
     @classmethod

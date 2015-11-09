@@ -15,7 +15,9 @@
 
 from gevent.pool import Pool
 import gevent
+from gevent.coros import RLock
 from solar.dblayer.solar_models import Resource
+from functools import wraps
 
 
 class DBLayerPool(Pool):
@@ -45,3 +47,12 @@ def solar_map(funct, args, concurrency=5):
 def get_local():
     from solar.dblayer.gevent_local import local
     return local
+
+
+def with_lock(f):
+    _l = RLock()
+    @wraps(f)
+    def _inner(*args, **kwargs):
+        with _l:
+            return f(*args, **kwargs)
+    return _inner
