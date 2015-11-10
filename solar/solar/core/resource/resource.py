@@ -33,9 +33,10 @@ from solar.dblayer.solar_models import CommitedResource
 
 from solar.dblayer.solar_models import Resource as DBResource
 from solar.dblayer.model import StrInt
+from solar.dblayer.proxy import DBLayerProxy
 from solar.core.signals import get_mapping
 
-from solar.dblayer.model import StrInt
+
 
 
 def read_meta(base_path):
@@ -102,7 +103,7 @@ class Resource(object):
 
 
     # Load
-    @dispatch(DBResource)
+    @dispatch(object)
     def __init__(self, resource_db):
         self.db_obj = resource_db
         self.name = resource_db.name
