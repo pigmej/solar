@@ -20,7 +20,9 @@ mock
 multipledispatch==0.4.8
 pydot
 bunch
+wrapt
 # if you want to use riak backend then
 riak
 # if you want to use sql backend then
 # peewee
+
