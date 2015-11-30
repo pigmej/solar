@@ -61,6 +61,19 @@ Tag
 Used to create arbitrary groups of resources, later this groups will be
 used for different user operations.
 
+
+Basic resource structure
+------------------------
+
+.. code::
+
+   ├── actions
+   │   ├── remove.pp
+   │   ├── run.pp
+   │   └── update.pp
+   └── meta.yaml
+
+
 .. _res-handler-term:
 
 Handler
@@ -71,6 +84,14 @@ Currently handler specified in resource meta.yaml and used for all resource
 actions ::
 
   handler: puppet
+
+
+There are 2 special directories:
+
+- ``templates``
+- ``scripts``
+
+if found, these directories with all contents will be synchronized to remote host by sync :ref:`res-transports-term`.
 
 .. _res-transports-term:
 
@@ -101,6 +122,7 @@ BAT transport
 -------------
 According to preferences solar will choose best available transport for
 file uploading and command execution.
+
 
 .. _res-event-term:
 
