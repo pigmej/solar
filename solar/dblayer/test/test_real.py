@@ -16,6 +16,7 @@ from __future__ import print_function
 import pytest
 
 from solar.dblayer.model import check_state_for
+from solar.dblayer.model import clear_cache
 from solar.dblayer.model import StrInt
 from solar.dblayer.solar_models import DBLayerSolarException
 from solar.dblayer.solar_models import Resource
@@ -681,3 +682,25 @@ def test_connect_other_list(rk):
     Resource.save_all_lazy()
 
     assert r1.inputs['config']['trackers'] == ["t1", "t2"]
+
+
+@pytest.mark.parametrize('depth', (100, ))
+def test_lazy_get(rk, depth):
+    keys = [next(rk) for x in xrange(depth)]
+
+    r1 = create_resource(keys[0], {'name': 'start',
+                                   'inputs': {'a': 1,
+                                              'b': 2}})
+    r1.save()
+    prev = r1
+    for i, key in enumerate(keys[1:]):
+        r = create_resource(key, {'name': 'r%d' % i,
+                                  'inputs': {'a': None,
+                                             'b': None}})
+        prev.connect(r, {'a': 'a', 'b': 'b'})
+        r.save()
+        prev = r
+
+    clear_cache()
+    r = Resource.get(key)
+    assert r.inputs['a'] == 1

@@ -375,6 +375,7 @@ class InputsFieldWrp(IndexFieldWrp):
             c.wipe()
 
     def _has_own_input(self, name):
+        return True
         try:
             return self._cache[name]
         except KeyError:
@@ -407,15 +408,17 @@ class InputsFieldWrp(IndexFieldWrp):
             kwargs = dict(startkey='{}|'.format(my_name),
                           endkey='{}|~'.format(my_name),
                           return_terms=True)
-            my_type = self._input_type(self._instance, name)
-            if my_type == InputTypes.simple:
-                max_results = 1
-            else:
-                max_results = 99999
+            # my_type = self._input_type(self._instance, name)
+            # if my_type == InputTypes.simple:
+            #     max_results = 1
+            # else:
+            #     max_results = 99999
+            max_results = 99999
             c.get_index(self._instance._get_index, ind_name, **kwargs)
             recvs = tuple(c.filter(startkey="{}|{}|".format(my_name, name),
                                    endkey="{}|{}|~".format(my_name, name),
                                    max_results=max_results))
+            my_type = InputTypes.simple
         if not recvs:
             _res = self._get_raw_field_val(name)
             self._cache[name] = _res
@@ -432,7 +435,7 @@ class InputsFieldWrp(IndexFieldWrp):
         index_val, obj_key = recvs
         _, inp, emitter_key, emitter_inp, _mapping_type = index_val.split('|',
                                                                           4)
-        res = Resource.get(emitter_key).inputs._get_field_val(emitter_inp,
+        res = Resource.get_lazy(emitter_key).inputs._get_field_val(emitter_inp,
                                                               other)
         self._cache[name] = res
         return res
@@ -443,7 +446,7 @@ class InputsFieldWrp(IndexFieldWrp):
             index_val, obj_key = recv
             _, inp, emitter_key, emitter_inp, mapping_type = index_val.split(
                 '|', 4)
-            res = Resource.get(emitter_key).inputs._get_field_val(emitter_inp,
+            res = Resource.get_lazy(emitter_key).inputs._get_field_val(emitter_inp,
                                                                   other)
             if mapping_type != "{}_{}".format(InputTypes.simple.value,
                                               InputTypes.simple.value):
@@ -454,7 +457,7 @@ class InputsFieldWrp(IndexFieldWrp):
                 index_val, obj_key = recv
                 _, _, emitter_key, emitter_inp, mapping_type = index_val.split(
                     '|', 4)
-                cres = Resource.get(emitter_key).inputs._get_field_val(
+                cres = Resource.get_lazy(emitter_key).inputs._get_field_val(
                     emitter_inp, other)
                 res.append(cres)
         self._cache[name] = res
@@ -467,7 +470,7 @@ class InputsFieldWrp(IndexFieldWrp):
             index_val, obj_key = recv
             (_, _, emitter_key, emitter_inp,
              my_tag, my_val, mapping_type) = index_val.split('|', 6)
-            cres = Resource.get(emitter_key).inputs._get_field_val(emitter_inp,
+            cres = Resource.get_lazy(emitter_key).inputs._get_field_val(emitter_inp,
                                                                    other)
             items.append((my_tag, my_val, cres))
             tags.add(my_tag)
@@ -486,7 +489,7 @@ class InputsFieldWrp(IndexFieldWrp):
                 if mapping_type != "{}_{}".format(InputTypes.simple.value,
                                                   InputTypes.simple.value):
                     raise NotImplementedError()
-                res = Resource.get(emitter_key).inputs._get_field_val(
+                res = Resource.get_lazy(emitter_key).inputs._get_field_val(
                     emitter_inp, other)
             elif splen == 7:
                 # partial
@@ -499,7 +502,7 @@ class InputsFieldWrp(IndexFieldWrp):
                         res[my_val] = cres
                 (_, _, emitter_key, emitter_inp,
                  my_tag, my_val, mapping_type) = splitted
-                cres = Resource.get(emitter_key).inputs._get_field_val(
+                cres = Resource.get_lazy(emitter_key).inputs._get_field_val(
                     emitter_inp, other)
                 res[my_val] = cres
             else:
@@ -530,13 +533,13 @@ class InputsFieldWrp(IndexFieldWrp):
             if len(splitted_val) == 5:
                 # it was list hash but with whole dict mapping
                 _, _, emitter_key, emitter_inp, mapping_type = splitted_val
-                cres = Resource.get(emitter_key).inputs._get_field_val(
+                cres = Resource.get_lazy(emitter_key).inputs._get_field_val(
                     emitter_inp, other)
                 items.append((emitter_key, None, cres))
             else:
                 (_, _, emitter_key, emitter_inp,
                  my_tag, my_val, mapping_type) = splitted_val
-                cres = Resource.get(emitter_key).inputs._get_field_val(
+                cres = Resource.get_lazy(emitter_key).inputs._get_field_val(
                     emitter_inp, other)
                 items.append((my_tag, my_val, cres))
         tmp_res = {}
@@ -561,7 +564,7 @@ class InputsFieldWrp(IndexFieldWrp):
             index_val, obj_key = recv
             splitted = index_val.split('|', 4)
             _, inp, emitter_key, emitter_inp, _ = splitted
-            res = Resource.get(emitter_key)
+            res = Resource.lazy_get(emitter_key)
             inp_value = res.inputs._get_field_val(emitter_inp,
                                                   other)
             if computable_type == ComputablePassedTypes.values.name:
