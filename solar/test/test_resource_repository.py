@@ -15,6 +15,7 @@
 
 import os
 import pytest
+import shutil
 from solar.core.resource.repository import Repository
 
 
@@ -59,25 +60,27 @@ def repos_path(tmpdir_factory):
 
 
 @pytest.fixture(scope="function")
-def ct(tmpdir_factory):
-    rp = str(tmpdir_factory.mktemp('resources'))
+def ct(request, tmpdir_factory):
+    rp = str(tmpdir_factory.mktemp('{}-resources'.format(request.function.__name__)))
     generate_structure(rp, 3)
     return rp
 
 
 @pytest.fixture(scope="module")
-def repo_r(tmpdir_factory):
-    path = ct(tmpdir_factory)
+def repo_r(request, tmpdir_factory):
+    path = ct(request, tmpdir_factory)
     r = Repository('rtest')
     r.create(path)
     return r
 
 
 @pytest.fixture(scope='function')
-def repo_w(tmpdir_factory):
-    path = ct(tmpdir_factory)
+def repo_w(request, tmpdir_factory):
+    path = ct(request, tmpdir_factory)
     r = Repository('rwtest')
     r.create(path)
+    request.addfinalizer(lambda: shutil.rmtree(path))
+    request.addfinalizer(lambda: r.remove())
     return r
 
 
@@ -95,7 +98,7 @@ def test_simple_create(ct):
                           ('invalid/first:0.0.1', False)))
 def test_simple_select(repo_r, spec, exp):
     spec = Repository._parse_spec(spec)
-    assert Repository.contains(spec) == bool(exp)
+    assert Repository.contains(spec) is exp
     if exp:
         metadata = Repository.get_metadata(spec)
         assert metadata['version'] == spec['version']
@@ -110,7 +113,7 @@ def test_simple_select(repo_r, spec, exp):
                           ('rtest/first:>=0.0.5', True, '1.0.0'),
                           ('rtest/first:>=1.0.0', True, '1.0.0')))
 def test_guess_version_sharp(repo_r, spec, exp, exp_ver):
-    assert Repository.contains(spec) == bool(exp)
+    assert Repository.contains(spec) is exp
     if exp:
         metadata = Repository.get_metadata(spec)
         assert metadata['version'] == exp_ver
@@ -123,7 +126,35 @@ def test_guess_version_sharp(repo_r, spec, exp, exp_ver):
                           ('rtest/first:>0.0.5', True, '1.0.0'),
                           ('rtest/first:>1.0.0', False, '')))
 def test_guess_version_soft(repo_r, spec, exp, exp_ver):
-    assert Repository.contains(spec) == bool(exp)
+    assert Repository.contains(spec) is exp
     if exp:
         metadata = Repository.get_metadata(spec)
         assert metadata['version'] == exp_ver
+
+
+@pytest.mark.parametrize('spec', ('rwtest/first:0.0.1',
+                                  'rwtest/first:==0.0.1'))
+def test_remove_single(repo_w, spec):
+    assert Repository.contains(spec)
+    repo_w.remove_single(spec)
+    assert Repository.contains(spec) is False
+
+
+def test_two_repos(tmpdir):
+    rp1 = str(tmpdir) + '/r1'
+    rp2 = str(tmpdir) + '/r2'
+    generate_structure(rp1, 2)
+    generate_structure(rp2, 5)
+    r1 = Repository('repo1')
+    r1.create(rp1)
+    r2 = Repository('repo2')
+    r2.create(rp2)
+    assert set(Repository.list_repos()) == set(['repo1', 'repo2'])
+    assert Repository.contains('repo1/first:0.0.1')
+    assert Repository.contains('repo2/first:0.0.1')
+    assert Repository.contains('repo1/first:2.0.0') is False
+    assert Repository.contains('repo2/first:2.0.0')
+
+    r2.remove()
+    assert set(Repository.list_repos()) == set(['repo1'])
+    assert Repository.contains('repo2/first:2.0.0') is False

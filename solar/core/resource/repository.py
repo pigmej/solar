@@ -96,10 +96,15 @@ class Repository(object):
         shutil.copytree(source, target_path, symlinks=True)
 
     def remove(self):
-        pass
+        shutil.rmtree(self.fpath)
 
-    def remove_single(self, name):
-        pass
+    def remove_single(self, spec):
+        spec = self._parse_spec(spec)
+        if spec['version_sign'] != '==':
+            raise RepositoryException("Removal possible only with `==` sign")
+        path = self._make_version_path(spec)
+        shutil.rmtree(path)
+        return True
 
     def iter_contents(self, resource_name=None):
 
@@ -196,3 +201,7 @@ class Repository(object):
         except ResourceNotFound:
             return False
         return os.path.exists(path)
+
+    @classmethod
+    def list_repos(cls):
+        return os.listdir(cls._REPOS_LOCATION)
