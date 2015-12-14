@@ -37,7 +37,7 @@ def read_meta(base_path):
     base_meta_file = os.path.join(base_path, 'meta.yaml')
 
     metadata = utils.yaml_load(base_meta_file)
-    metadata['version'] = '1.0.0'
+    metadata.setdefault('version', '1.0.0')
     metadata['base_path'] = os.path.abspath(base_path)
     actions_path = os.path.join(metadata['base_path'], 'actions')
     metadata['actions_path'] = actions_path
