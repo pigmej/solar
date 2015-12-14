@@ -25,25 +25,13 @@ import networkx
 
 
 from solar.core.signals import get_mapping
+from solar.core.resource.repository import Repository
 from solar.core import validation
 from solar.dblayer.model import StrInt
 from solar.dblayer.solar_models import CommitedResource
 from solar.dblayer.solar_models import Resource as DBResource
 from solar.events import api
 from solar import utils
-
-
-def read_meta(base_path):
-    base_meta_file = os.path.join(base_path, 'meta.yaml')
-
-    metadata = utils.yaml_load(base_meta_file)
-    metadata.setdefault('version', '1.0.0')
-    metadata['base_path'] = os.path.abspath(base_path)
-    actions_path = os.path.join(metadata['base_path'], 'actions')
-    metadata['actions_path'] = actions_path
-    metadata['base_name'] = os.path.split(metadata['base_path'])[-1]
-
-    return metadata
 
 
 RESOURCE_STATE = Enum(
@@ -55,16 +43,17 @@ class Resource(object):
 
     # Create
     @dispatch(basestring, basestring)
-    def __init__(self, name, base_path, args=None, tags=None,
+    def __init__(self, name, spec, args=None, tags=None,
                  virtual_resource=None):
         args = args or {}
         self.name = name
-        if base_path:
-            metadata = read_meta(base_path)
+        if spec:
+            repo, spec = Repository.parse(spec)
+            metadata = repo.get_metadata(spec)
+            self.base_path = repo.get_path(spec)
         else:
             metadata = deepcopy(self._metadata)
-
-        self.base_path = base_path
+            self.base_path = spec  # TODO: remove this old method?
 
         if tags is None:
             tags = []

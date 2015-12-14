@@ -18,9 +18,7 @@ from collections import defaultdict
 import os
 import shutil
 
-
-from solar.core.resource.resource import read_meta
-from solar.dblayer.solar_models import ResourceRepository
+from solar import utils
 
 try:
     import semver
@@ -40,6 +38,19 @@ class ResourceNotFound(RepositoryException):
         self.message = 'Resource definition %r not found' % spec
 
 
+def read_meta(base_path):
+    base_meta_file = os.path.join(base_path, 'meta.yaml')
+
+    metadata = utils.yaml_load(base_meta_file)
+    metadata.setdefault('version', '1.0.0')
+    metadata['base_path'] = os.path.abspath(base_path)
+    actions_path = os.path.join(metadata['base_path'], 'actions')
+    metadata['actions_path'] = actions_path
+    metadata['base_name'] = os.path.split(metadata['base_path'])[-1]
+
+    return metadata
+
+
 class Repository(object):
 
     db_obj = None
@@ -48,7 +59,7 @@ class Repository(object):
     def __init__(self, name):
         self.name = name
         # TODO: (jnowak) sanitize name
-        self.fpath = os.path.join(self._REPOS_LOCATION, self.name)
+        self.fpath = self.repo_path(self.name)
 
     def _list_source_contents(self, source):
         for pth in os.listdir(source):
@@ -71,16 +82,15 @@ class Repository(object):
                         if os.path.exists(os.path.join(fp, 'meta.yaml')):
                             yield pth, fp
 
+    @classmethod
+    def repo_path(cls, repo_name):
+        return os.path.join(cls._REPOS_LOCATION, repo_name)
+
     def create(self, source):
-        r = ResourceRepository(self.name)
         os.mkdir(self.fpath)
-        self.db_obj = r
-        r.save_lazy()
         self._add_contents(source)
 
     def update(self, source):
-        r = ResourceRepository.get(self.name)
-        self.db_obj = r
         self._add_contents(source)
 
     def _add_contents(self, source):
@@ -182,9 +192,12 @@ class Repository(object):
         return os.path.join(self.fpath, spec['resource_name'], version)
 
     def read_meta(self, spec):
-        spec = self._parse_spec(spec)
-        path = self._make_version_path(spec)
+        path = self.get_path(spec)
         return read_meta(path)
+
+    def get_path(self, spec):
+        spec = self._parse_spec(spec)
+        return self._make_version_path(spec)
 
     @classmethod
     def get_metadata(cls, spec):
@@ -205,3 +218,8 @@ class Repository(object):
     @classmethod
     def list_repos(cls):
         return os.listdir(cls._REPOS_LOCATION)
+
+    @classmethod
+    def parse(cls, spec):
+        spec = cls._parse_spec(spec)
+        return Repository(spec['repo']), spec

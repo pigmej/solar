@@ -1075,7 +1075,3 @@ class LogItem(Model):
             vals['uid'] = cls.uid.default
         vals.update(data)
         return LogItem.from_dict(vals['uid'], vals)
-
-
-class ResourceRepository(Model):
-    pass
