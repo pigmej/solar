@@ -185,3 +185,11 @@ def test_two_repos(tmpdir):
     got = set(Repository.list_repos())
     assert got.intersection(exp) == exp
     assert Repository.contains('repo2/first:2.0.0') is False
+
+
+def test_update(repo_w, tmpdir):
+    rp = str(tmpdir) + '/second'
+    generate_structure(rp, 2)
+    with pytest.raises(OSError):
+        repo_w.update(rp)
+    repo_w.update(rp, overwrite=True)

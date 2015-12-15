@@ -15,6 +15,7 @@
 
 from collections import defaultdict
 
+import errno
 import os
 import shutil
 
@@ -90,20 +91,28 @@ class Repository(object):
         os.mkdir(self.fpath)
         self._add_contents(source)
 
-    def update(self, source):
-        self._add_contents(source)
+    def update(self, source, overwrite=False):
+        self._add_contents(source, overwrite)
 
-    def _add_contents(self, source):
+    def _add_contents(self, source, overwrite=False):
         cnts = self._list_source_contents(source)
         for single_name, single_path in cnts:
-            self.add_single(single_name, single_path)
+            self.add_single(single_name, single_path, overwrite)
 
-    def add_single(self, name, source):
+    def add_single(self, name, source, overwrite=False):
         metadata = read_meta(source)
         version = metadata['version']
         # TODO: (jnowak) sanitize version
         target_path = os.path.join(self.fpath, name, version)
-        shutil.copytree(source, target_path, symlinks=True)
+        try:
+            shutil.copytree(source, target_path, symlinks=True)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
+            if not overwrite:
+                raise
+            shutil.rmtree(target_path)
+            shutil.copytree(source, target_path, symlinks=True)
 
     def remove(self):
         shutil.rmtree(self.fpath)
