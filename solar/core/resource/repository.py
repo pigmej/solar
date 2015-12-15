@@ -119,9 +119,12 @@ class Repository(object):
     def iter_contents(self, resource_name=None):
 
         def _single(single_path):
-            for version in os.listdir(os.path.join(self.fpath, single_path)):
-                yield {"name": single_path,
-                       'version': version}
+            try:
+                for version in os.listdir(os.path.join(self.fpath, single_path)):
+                    yield {"name": single_path,
+                           'version': version}
+            except OSError:
+                return
 
         if resource_name is None:
             for single in os.listdir(self.fpath):
@@ -172,12 +175,23 @@ class Repository(object):
         version = spec['version']
         version_sign = spec['version_sign']
         resource_name = spec['resource_name']
-        if version_sign != '==':
+        if version_sign == '==':
+            return os.path.join(self.fpath, spec['resource_name'], version)
+        if not _semver:
+            raise RepositoryException("You need semver support "
+                                      "for complex version matching")
+        found = self.iter_contents(resource_name)
+        if version is None:
+            sc = semver.compare
+            sorted_vers = sorted(found,
+                                 cmp=lambda a, b: sc(a['version'],
+                                                     b['version']),
+                                 reverse=True)
+            if not sorted_vers:
+                raise ResourceNotFound(spec)
+            version = sorted_vers[0]['version']
+        else:
             version = '{}{}'.format(version_sign, version)
-            if not _semver:
-                raise RepositoryException("You need semver support "
-                                          "for complex version matching")
-            found = self.iter_contents(resource_name)
             matched = filter(lambda x: semver.match(x['version'], version),
                              found)
             sorted_vers = sorted(matched,
@@ -187,8 +201,8 @@ class Repository(object):
             version = next((x['version'] for x in sorted_vers
                             if semver.match(x['version'], version)),
                            None)
-            if version is None:
-                raise ResourceNotFound(spec)
+        if version is None:
+            raise ResourceNotFound(spec)
         return os.path.join(self.fpath, spec['resource_name'], version)
 
     def read_meta(self, spec):

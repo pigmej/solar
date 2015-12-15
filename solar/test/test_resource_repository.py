@@ -52,6 +52,16 @@ def generate_structure(target, versions='1.0.0'):
             with open(os.path.join(fp, 'meta.yaml'), 'wb') as f:
                 f.write(cnt)
 
+def generator(request, tmpdir_factory):
+    try:
+        name = request.function.__name__
+    except AttributeError:
+        # function not available in module-scoped context
+        name = "module"
+    rp = str(tmpdir_factory.mktemp('{}-resources'.format(name)))
+    generate_structure(rp, 3)
+    return rp
+
 
 @pytest.fixture(scope='module', autouse=True)
 def repos_path(tmpdir_factory):
@@ -61,14 +71,14 @@ def repos_path(tmpdir_factory):
 
 @pytest.fixture(scope="function")
 def ct(request, tmpdir_factory):
-    rp = str(tmpdir_factory.mktemp('{}-resources'.format(request.function.__name__)))
-    generate_structure(rp, 3)
-    return rp
+    p = generator(request, tmpdir_factory)
+    request.addfinalizer(lambda: shutil.rmtree(p))
+    return p
 
 
 @pytest.fixture(scope="module")
 def repo_r(request, tmpdir_factory):
-    path = ct(request, tmpdir_factory)
+    path = generator(request, tmpdir_factory)
     r = Repository('rtest')
     r.create(path)
     return r
@@ -76,7 +86,7 @@ def repo_r(request, tmpdir_factory):
 
 @pytest.fixture(scope='function')
 def repo_w(request, tmpdir_factory):
-    path = ct(request, tmpdir_factory)
+    path = generator(request, tmpdir_factory)
     r = Repository('rwtest')
     r.create(path)
     request.addfinalizer(lambda: shutil.rmtree(path))
@@ -103,6 +113,19 @@ def test_simple_select(repo_r, spec, exp):
         metadata = Repository.get_metadata(spec)
         assert metadata['version'] == spec['version']
         assert spec['version_sign'] == '=='
+
+
+@pytest.mark.parametrize('spec, exp',
+                         (('rtest/first', True),
+                          ('invalid/first', False)))
+def test_get_latest(repo_r, spec, exp):
+    spec = Repository._parse_spec(spec)
+    assert spec['version'] is None
+    assert Repository.contains(spec) is exp
+    if exp:
+        metadata = Repository.get_metadata(spec)
+        assert spec['version_sign'] == '>='
+
 
 
 @pytest.mark.parametrize('spec, exp, exp_ver',
@@ -149,12 +172,16 @@ def test_two_repos(tmpdir):
     r1.create(rp1)
     r2 = Repository('repo2')
     r2.create(rp2)
-    assert set(Repository.list_repos()) == set(['repo1', 'repo2'])
+    exp = set(['repo1', 'repo2'])
+    got = set(Repository.list_repos())
+    assert got.intersection(exp) == exp
     assert Repository.contains('repo1/first:0.0.1')
     assert Repository.contains('repo2/first:0.0.1')
     assert Repository.contains('repo1/first:2.0.0') is False
     assert Repository.contains('repo2/first:2.0.0')
 
     r2.remove()
-    assert set(Repository.list_repos()) == set(['repo1'])
+    exp = set(['repo1'])
+    got = set(Repository.list_repos())
+    assert got.intersection(exp) == exp
     assert Repository.contains('repo2/first:2.0.0') is False
