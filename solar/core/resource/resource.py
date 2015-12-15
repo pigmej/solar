@@ -59,7 +59,7 @@ class Resource(object):
             tags = []
         m_tags = metadata.get('tags', [])
         tags.extend(m_tags)
-        tags.append('resource={}'.format(metadata['id']))
+        tags.append('resource={}'.format(name))
 
         self.virtual_resource = virtual_resource
 
