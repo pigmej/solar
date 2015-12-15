@@ -25,7 +25,7 @@ import networkx
 
 
 from solar.core.signals import get_mapping
-from solar.core.resource.repository import Repository
+from solar.core.resource.repository import Repository, read_meta
 from solar.core import validation
 from solar.dblayer.model import StrInt
 from solar.dblayer.solar_models import CommitedResource
@@ -48,9 +48,14 @@ class Resource(object):
         args = args or {}
         self.name = name
         if spec:
-            repo, spec = Repository.parse(spec)
-            metadata = repo.get_metadata(spec)
-            self.base_path = repo.get_path(spec)
+            if spec.startswith('/'):
+                # it's full path, don't use repo
+                self.base_path = spec
+                metadata = read_meta(spec)
+            else:
+                repo, spec = Repository.parse(spec)
+                metadata = repo.get_metadata(spec)
+                self.base_path = repo.get_path(spec)
         else:
             metadata = deepcopy(self._metadata)
             self.base_path = spec  # TODO: remove this old method?

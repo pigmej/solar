@@ -52,6 +52,7 @@ def generate_structure(target, versions='1.0.0'):
             with open(os.path.join(fp, 'meta.yaml'), 'wb') as f:
                 f.write(cnt)
 
+
 def generator(request, tmpdir_factory):
     try:
         name = request.function.__name__

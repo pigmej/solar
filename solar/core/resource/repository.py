@@ -129,7 +129,8 @@ class Repository(object):
 
         def _single(single_path):
             try:
-                for version in os.listdir(os.path.join(self.fpath, single_path)):
+                for version in os.listdir(os.path.join(self.fpath,
+                                                       single_path)):
                     yield {"name": single_path,
                            'version': version}
             except OSError:
