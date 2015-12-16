@@ -52,6 +52,10 @@ def read_meta(base_path):
     return metadata
 
 
+class RepositoryExists(RepositoryException):
+    pass
+
+
 class Repository(object):
 
     db_obj = None
@@ -88,7 +92,13 @@ class Repository(object):
         return os.path.join(cls._REPOS_LOCATION, repo_name)
 
     def create(self, source):
-        os.mkdir(self.fpath)
+        try:
+            os.mkdir(self.fpath)
+        except OSError as e:
+            if e.errno == errno.EEXIST:
+                raise RepositoryExists("Repository %s exists" % self.name)
+            else:
+                raise
         self._add_contents(source)
 
     def update(self, source, overwrite=False):
