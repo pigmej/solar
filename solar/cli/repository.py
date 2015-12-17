@@ -40,9 +40,11 @@ def show(repository):
 
 
 @repository.command()
-@click.argument('name')
 @click.argument('source', type=click.Path(exists=True, resolve_path=True))
+@click.option('--name', '-n', default=None)
 def create(name, source):
+    if name is None:
+        name = os.path.split(source)[-1]
     repo = Repository(name)
     try:
         repo.create(source)
