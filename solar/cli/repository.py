@@ -90,10 +90,9 @@ def remove_repo(name):
 
 
 @repository.command()
-@click.argument('name')
 @click.argument('spec')
-def remove(name, spec):
-    repo = Repository(name)
+def remove(spec):
+    repo, spec = Repository.parse(spec)
     repo.remove_single(spec)
 
 
