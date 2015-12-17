@@ -173,7 +173,7 @@ class Repository(object):
         if '/' in repos:
             repo_name, resource_name = repos.split('/', 1)
         else:
-            repo_name = 'core'
+            repo_name = 'resources'
             resource_name = repos
         if version is None:
             version_sign = ">="
