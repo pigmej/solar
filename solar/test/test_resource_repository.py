@@ -124,9 +124,8 @@ def test_get_latest(repo_r, spec, exp):
     assert spec['version'] is None
     assert Repository.contains(spec) is exp
     if exp:
-        metadata = Repository.get_metadata(spec)
+        Repository.get_metadata(spec)
         assert spec['version_sign'] == '>='
-
 
 
 @pytest.mark.parametrize('spec, exp, exp_ver',
