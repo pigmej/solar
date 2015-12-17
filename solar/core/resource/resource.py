@@ -25,7 +25,8 @@ import networkx
 
 
 from solar.core.signals import get_mapping
-from solar.core.resource.repository import Repository, read_meta
+from solar.core.resource.repository import read_meta
+from solar.core.resource.repository import Repository
 from solar.core import validation
 from solar.dblayer.model import StrInt
 from solar.dblayer.solar_models import CommitedResource
