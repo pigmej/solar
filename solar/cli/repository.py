@@ -13,11 +13,11 @@
 #    under the License.
 
 import click
+import os
 import yaml
 
 from solar.core.resource.repository import Repository
 from solar.core.resource.repository import RepositoryExists
-
 
 @click.group()
 def repository():
@@ -71,9 +71,14 @@ def update(name, source, overwrite):
 @click.argument('name')
 @click.argument('source', type=click.Path(exists=True, resolve_path=True))
 @click.option('--overwrite', is_flag=True, default=False)
-def add(name, source, overwrite):
+@click.option('--resource_name', type=str, default=None)
+def add(name, source, overwrite, resource_name):
     repo = Repository(name)
-    repo.add_single(source, overwrite)
+    if resource_name is None:
+        resource_name = os.path.split(source)[-1]
+    repo.add_single(name=resource_name,
+                    source=source,
+                    overwrite=overwrite)
 
 
 @repository.command()

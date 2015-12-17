@@ -110,7 +110,13 @@ class Repository(object):
             self.add_single(single_name, single_path, overwrite)
 
     def add_single(self, name, source, overwrite=False):
-        metadata = read_meta(source)
+        try:
+            metadata = read_meta(source)
+        except IOError as e:
+            if e.errno == errno.ENOENT:
+                raise RepositoryException(
+                    "meta.yaml not found: %s" % e.filename)
+            raise
         version = metadata['version']
         # TODO: (jnowak) sanitize version
         target_path = os.path.join(self.fpath, name, version)
