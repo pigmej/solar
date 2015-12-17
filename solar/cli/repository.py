@@ -19,6 +19,7 @@ import yaml
 from solar.core.resource.repository import Repository
 from solar.core.resource.repository import RepositoryExists
 
+
 @click.group()
 def repository():
     pass
