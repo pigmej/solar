@@ -39,7 +39,7 @@ def show(repository):
         click.echo_via_pager(content)
 
 
-@repository.command()
+@repository.command(name='import')
 @click.argument('source', type=click.Path(exists=True, resolve_path=True))
 @click.option('--name', '-n', default=None)
 def create(name, source):
