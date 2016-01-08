@@ -24,7 +24,8 @@
     - file: path=/.solar_config_override state=touch mode=0644
     - lineinfile:
         dest: /.solar_config_override
-        line: "solar_db: riak://10.0.0.2:8087"
+        # line: "solar_db: riak://10.0.0.2:8087"
+        line: "solar_db: sqlite:////vagrant/solar.db"
         state: present
         create: yes
     - lineinfile:

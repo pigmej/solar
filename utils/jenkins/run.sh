@@ -33,12 +33,19 @@ sudo mv /home/vagrant/solar /vagrant
 sudo chown -R ${ADMIN_USER} ${INSTALL_DIR}
 sudo ansible-playbook -v -i \"localhost,\" -c local ${INSTALL_DIR}/bootstrap/playbooks/solar.yaml
 
+# sudo docker kill vagrant_solar-celery_1
+# sudo docker kill vagrant_riak_1
+
 set -e
 
-# wait for riak
-sudo docker exec vagrant_riak_1 riak-admin wait_for_service riak_kv
-
 export SOLAR_CONFIG_OVERRIDE="/.solar_config_override"
+
+solar resource show
+
+ansible-playbook -v -i \"localhost,\" -c local ${INSTALL_DIR}/bootstrap/playbooks/celery.yaml
+
+# wait for riak
+# sudo docker exec vagrant_riak_1 riak-admin wait_for_service riak_kv
 
 solar repo update templates ${INSTALL_DIR}/utils/jenkins/repository
 
